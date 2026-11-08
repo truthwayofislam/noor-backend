@@ -32,7 +32,7 @@ class HealthEndpointTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(get_response.status_code, 200)
                     self.assertEqual(
                         get_response.json(),
-                        {"status": "healthy", "database": "turso"},
+                        {"status": "healthy"},
                     )
 
                     head_response = await client.head(path)

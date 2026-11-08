@@ -78,7 +78,6 @@ async def health_check():
     """Liveness endpoint for uptime monitors."""
     return {
         "status": "healthy",
-        "database": "turso",
     }
 
 # Error handlers
