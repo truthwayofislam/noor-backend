@@ -51,6 +51,14 @@ the OS, Docker images, and logs; more disk is preferable. The database is
 remote Turso, so the VPS does not need to hold the app's account database on
 its local disk.
 
+## Deploy on Botkeep
+
+Set the start command to `python main.py`. The server binds to `0.0.0.0` and
+uses Botkeep's assigned `SERVER_PORT` (falling back to `PORT`, then `8000` for
+local development). Add `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and
+`SECRET_KEY` in Botkeep's Environment/Secrets settings; the API exits at
+startup if the required Turso settings are missing or invalid.
+
 For uptime monitors, use `/healthz` or `/health`. Both accept `GET` and `HEAD`
 and return HTTP 200 while the API is responding. These are liveness endpoints;
 they do not independently verify Turso connectivity.

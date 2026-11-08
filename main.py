@@ -98,12 +98,16 @@ async def internal_error_handler(request, exc):
         content={"detail": "Internal server error"}
     )
 
+
+def get_server_port() -> int:
+    return int(os.getenv("SERVER_PORT") or os.getenv("PORT", "8000"))
+
+
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",  # All network interfaces for WiFi access
-        port=port,
+        host="0.0.0.0",
+        port=get_server_port(),
         reload=os.getenv("DEBUG", "False") == "True"
     )
