@@ -7,6 +7,18 @@ from main import app, get_server_port
 
 
 class HealthEndpointTests(unittest.IsolatedAsyncioTestCase):
+    async def test_root_serves_the_public_site(self):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://test",
+        ) as client:
+            response = await client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("Noor", response.text)
+
     async def test_health_endpoints_support_get_and_head(self):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(

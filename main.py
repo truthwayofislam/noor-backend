@@ -2,12 +2,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
+
+SITE_DIR = Path(__file__).resolve().parent / "site"
 
 # Import routes
 from routes import auth, users, leaderboard
@@ -64,15 +67,10 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(leaderboard.router)
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
-    """API root endpoint"""
-    return {
-        "message": "Noor API - Islamic Companion App",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "status": "operational"
-    }
+    """Serve the Noor public landing page."""
+    return FileResponse(SITE_DIR / "index.html")
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 @app.api_route("/healthz", methods=["GET", "HEAD"])

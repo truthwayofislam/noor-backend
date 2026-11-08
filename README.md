@@ -1,8 +1,9 @@
 # Noor API
 
-Standalone FastAPI service for Noor accounts, activity rewards, and
-leaderboards. User and activity data is stored in Turso; deploy this repository
-separately from the Flutter app.
+Standalone FastAPI service and public landing site for Noor. It serves the
+website at `/`, API docs at `/docs`, and account/activity/leaderboard endpoints.
+User and activity data is stored in Turso; deploy this repository separately
+from the Flutter app.
 
 ## Local setup
 

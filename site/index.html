@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10241f">
+  <meta name="description" content="Noor is a thoughtful Islamic companion for Quran reading, prayer routines, learning, and daily reflection.">
+  <meta property="og:title" content="Noor — a little more light in every day">
+  <meta property="og:description" content="Quran, prayer tools, learning, and daily practices in one calm companion app.">
+  <title>Noor — a little more light in every day</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f2e9;
+      --muted: #b7c3bb;
+      --deep: #10241f;
+      --panel: #18332b;
+      --panel-soft: #1d3b31;
+      --line: rgba(235, 222, 181, .16);
+      --gold: #d7bd79;
+      --mint: #a8c8ae;
+      --serif: Georgia, "Times New Roman", serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 82% 7%, rgba(84, 121, 92, .23), transparent 34rem),
+        var(--deep);
+      line-height: 1.65;
+    }
+    a { color: inherit; }
+    .wrap { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
+    .nav {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand-mark {
+      width: 42px; height: 42px; display: grid; place-items: center;
+      border: 1px solid rgba(215, 189, 121, .55); border-radius: 15px 15px 12px 12px;
+      color: var(--gold); font-family: var(--serif); font-size: 25px;
+      background: linear-gradient(145deg, rgba(215,189,121,.15), rgba(168,200,174,.05));
+    }
+    .brand-name { font-family: var(--serif); font-size: 22px; letter-spacing: .03em; }
+    .nav-links { display: flex; align-items: center; gap: 27px; color: var(--muted); font-size: 14px; }
+    .nav-links a { text-decoration: none; }
+    .nav-links a:hover, .footer a:hover { color: var(--gold); }
+    .nav-cta {
+      color: var(--deep) !important; background: var(--gold); border-radius: 999px;
+      padding: 9px 16px; font-weight: 700;
+    }
+    .hero {
+      position: relative; overflow: hidden; min-height: 570px; display: grid; align-items: center;
+      padding-block: 90px 100px;
+    }
+    .hero::after {
+      content: "نور"; position: absolute; right: 3%; top: 50%; transform: translateY(-53%);
+      color: rgba(215, 189, 121, .055); font-size: clamp(210px, 35vw, 430px);
+      font-family: var(--serif); line-height: 1; pointer-events: none;
+    }
+    .hero-copy { position: relative; z-index: 1; max-width: 720px; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px; color: var(--gold);
+      letter-spacing: .16em; text-transform: uppercase; font-size: 11px; font-weight: 750;
+    }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--gold); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      max-width: 680px; margin-block: 24px 18px; font-family: var(--serif);
+      font-size: clamp(48px, 7vw, 78px); font-weight: 400; line-height: 1.04;
+      letter-spacing: -.035em;
+    }
+    h1 span { color: var(--gold); font-style: italic; }
+    .hero-copy > p { max-width: 590px; color: var(--muted); font-size: 18px; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 30px; }
+    .button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      min-height: 48px; padding: 0 21px; border: 1px solid transparent; border-radius: 999px;
+      background: var(--gold); color: #17241d; font-weight: 750; text-decoration: none;
+    }
+    .button.secondary { border-color: var(--line); background: rgba(255,255,255,.025); color: var(--ink); }
+    .button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .status { color: var(--muted); font-size: 13px; }
+    .status i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--mint); }
+    .section { padding-block: 84px; border-top: 1px solid var(--line); }
+    .section-heading { max-width: 650px; margin-bottom: 34px; }
+    .section-heading h2 { margin-block: 14px 10px; font: 400 clamp(34px, 4vw, 48px)/1.12 var(--serif); }
+    .section-heading p { color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card {
+      min-height: 210px; padding: 25px; border: 1px solid var(--line);
+      border-radius: 18px; background: linear-gradient(145deg, rgba(29,59,49,.92), rgba(24,51,43,.74));
+    }
+    .icon {
+      width: 43px; height: 43px; display: grid; place-items: center; margin-bottom: 20px;
+      border: 1px solid rgba(215,189,121,.27); border-radius: 14px; color: var(--gold); font-size: 20px;
+    }
+    .card h3 { margin-bottom: 8px; font: 400 23px/1.2 var(--serif); }
+    .card p { margin-bottom: 0; color: var(--muted); font-size: 14px; }
+    .about {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 38px; align-items: center;
+      padding: 34px; border: 1px solid var(--line); border-radius: 22px;
+      background: linear-gradient(130deg, rgba(29,59,49,.88), rgba(16,36,31,.45));
+    }
+    .about h2 { margin-bottom: 12px; font: 400 38px/1.12 var(--serif); }
+    .about p { color: var(--muted); }
+    .note { padding-left: 18px; border-left: 2px solid var(--gold); color: var(--ink) !important; }
+    .privacy-list { display: grid; gap: 12px; }
+    .privacy-item { display: flex; gap: 12px; color: var(--muted); font-size: 14px; }
+    .privacy-item b { color: var(--mint); font-weight: 600; }
+    .privacy-item::before { content: "✓"; color: var(--gold); }
+    .download {
+      display: flex; justify-content: space-between; align-items: center; gap: 32px;
+      padding: 34px; border: 1px solid rgba(215,189,121,.27); border-radius: 22px;
+      background: radial-gradient(ellipse at 90% 50%, rgba(215,189,121,.11), transparent 34rem), var(--panel);
+    }
+    .download h2 { margin-bottom: 8px; font: 400 36px/1.1 var(--serif); }
+    .download p { margin-bottom: 0; color: var(--muted); }
+    .footer {
+      display: flex; justify-content: space-between; gap: 20px; padding-block: 27px 36px;
+      border-top: 1px solid var(--line); color: var(--muted); font-size: 13px;
+    }
+    .footer-links { display: flex; gap: 20px; }
+    .footer a { text-decoration: none; }
+    @media (max-width: 760px) {
+      .nav { min-height: 68px; }
+      .nav-links { gap: 15px; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      .hero { min-height: 510px; padding-block: 70px; }
+      .hero::after { right: -9%; top: 57%; font-size: 240px; }
+      .hero-copy > p { font-size: 16px; }
+      .section { padding-block: 62px; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .about { grid-template-columns: 1fr; gap: 20px; padding: 26px; }
+      .download { align-items: flex-start; flex-direction: column; padding: 27px; }
+    }
+    @media (max-width: 480px) {
+      .wrap { width: min(100% - 30px, 1120px); }
+      .brand-name { font-size: 20px; }
+      .nav-cta { padding: 8px 13px; font-size: 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .card { min-height: 0; }
+      .footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap nav">
+    <a class="brand" href="/" aria-label="Noor home">
+      <span class="brand-mark" aria-hidden="true">ن</span>
+      <span class="brand-name">Noor</span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#about">Our approach</a>
+      <a class="nav-cta" href="#download">Get the app</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="wrap hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Your daily companion</span>
+        <h1>A little more <span>light</span> in every day.</h1>
+        <p>Make space for what matters with Quran reading, prayer tools, and gentle ways to keep learning—together in one thoughtful app.</p>
+        <div class="actions">
+          <a class="button" href="#download">Explore Noor <span aria-hidden="true">↗</span></a>
+          <a class="button secondary" href="#features">Discover features</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap section" id="features">
+      <div class="section-heading">
+        <span class="eyebrow">Made for everyday practice</span>
+        <h2>Helpful tools, gathered in one place.</h2>
+        <p>Whether you have a minute or a moment to settle in, Noor brings useful Islamic resources within easy reach.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <span class="icon" aria-hidden="true">۞</span>
+          <h3>Read and listen</h3>
+          <p>Explore Quran reading with Urdu translation, Arabic text, and recitation features.</p>
+        </article>
+        <article class="card">
+          <span class="icon" aria-hidden="true">◷</span>
+          <h3>Prayer tools</h3>
+          <p>Check prayer times, set reminders, and use the Qibla direction tool.</p>
+        </article>
+        <article class="card">
+          <span class="icon" aria-hidden="true">✦</span>
+          <h3>Learn at your pace</h3>
+          <p>Discover Arabic letters, daily duas, Hadith, and the 99 names of Allah.</p>
+        </article>
+        <article class="card">
+          <span class="icon" aria-hidden="true">☼</span>
+          <h3>Build a routine</h3>
+          <p>Create personal schedules and gentle reminders for your daily practice.</p>
+        </article>
+        <article class="card">
+          <span class="icon" aria-hidden="true">⌘</span>
+          <h3>Make learning engaging</h3>
+          <p>Explore quizzes and games designed to make learning approachable for families.</p>
+        </article>
+        <article class="card">
+          <span class="icon" aria-hidden="true">◈</span>
+          <h3>Keep your progress</h3>
+          <p>Track learning and activity progress when you choose to create an account.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section" id="about">
+      <div class="about">
+        <div>
+          <span class="eyebrow">A thoughtful approach</span>
+          <h2>Encouragement, without the noise.</h2>
+          <p>Noor is made to support personal practice and learning. Use the tools that help you, at your own pace.</p>
+          <p class="note">The app is a companion for learning and daily routines; prayer calculations and available features may depend on your settings and device.</p>
+        </div>
+        <div class="privacy-list" aria-label="Account data overview">
+          <div class="privacy-item"><span><b>Account details</b> such as email, username, and country are used for sign-in and your profile.</span></div>
+          <div class="privacy-item"><span><b>Progress and activity</b> support your profile, rewards, and leaderboard features.</span></div>
+          <div class="privacy-item"><span><b>Passwords are hashed</b> by the backend and are not stored as plain text.</span></div>
+          <div class="privacy-item"><span><b>Backend data</b> is stored using the service's Turso database.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap section" id="download">
+      <div class="download">
+        <div>
+          <span class="eyebrow">Noor for Android</span>
+          <h2>Your next step starts here.</h2>
+          <p>The Noor app has been submitted to APKPure. The download link will appear here when the listing is available.</p>
+        </div>
+        <span class="button secondary" aria-label="APKPure listing is not available yet">Coming soon on APKPure</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <span>© 2026 Noor. Made with care.</span>
+    <div class="footer-links">
+      <a href="/docs">API</a>
+      <a href="/healthz">Service status</a>
+    </div>
+  </footer>
+</body>
+</html>
