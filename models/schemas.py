@@ -2,6 +2,27 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import date, datetime
 
+ARABIC_COURSE_LESSON_IDS = frozenset({
+    *(f"basic-alphabet-{index:02d}" for index in range(1, 6)),
+    *(f"basic-reading-{index:02d}" for index in range(1, 13)),
+    *(f"words-{index:02d}" for index in range(1, 13)),
+    *(
+        f"{level_id}-{index:02d}"
+        for level_id in (
+            "conversation",
+            "places",
+            "descriptions",
+            "sentences",
+            "verbs",
+            "routine",
+            "tenses",
+            "dialogues",
+        )
+        for index in range(1, 11)
+    ),
+})
+
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)
@@ -43,7 +64,10 @@ class ActivityLog(BaseModel):
     activity_date: Optional[date] = None
 
 class ArabicCourseProgressSync(BaseModel):
-    completed_lesson_ids: List[str] = Field(default_factory=list, max_length=17)
+    completed_lesson_ids: List[str] = Field(
+        default_factory=list,
+        max_length=len(ARABIC_COURSE_LESSON_IDS),
+    )
     hearts: int = Field(ge=0, le=5)
     heart_date: Optional[date] = None
     heart_spend_ids: List[str] = Field(default_factory=list, max_length=5)

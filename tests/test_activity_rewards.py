@@ -130,6 +130,46 @@ class ActivityRewardTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(error.exception.status_code, 422)
 
+    async def test_arabic_progress_accepts_levels_three_through_ten(self):
+        lesson_ids = [
+            "conversation-01",
+            "places-10",
+            "descriptions-05",
+            "sentences-10",
+            "verbs-08",
+            "routine-10",
+            "tenses-10",
+            "dialogues-10",
+        ]
+        progress = ArabicCourseProgressSync(
+            completed_lesson_ids=lesson_ids,
+            hearts=5,
+            heart_date=datetime.now(timezone.utc).date(),
+        )
+        storage_result = {
+            "completed_lesson_ids": lesson_ids,
+            "hearts": 5,
+            "heart_date": progress.heart_date.isoformat(),
+            "user": self.user,
+        }
+
+        with patch.object(
+            users.storage,
+            "sync_arabic_course_progress",
+            new_callable=AsyncMock,
+            return_value=storage_result,
+        ) as sync_progress:
+            response = await users.sync_arabic_course_progress(progress, self.user)
+
+        self.assertEqual(
+            sync_progress.await_args.kwargs["completed_lesson_ids"],
+            lesson_ids,
+        )
+        self.assertEqual(
+            response["progress"]["completed_lesson_ids"],
+            lesson_ids,
+        )
+
     async def test_arabic_progress_sync_returns_server_merged_state(self):
         today = datetime.now(timezone.utc).date()
         progress = ArabicCourseProgressSync(

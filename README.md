@@ -101,7 +101,7 @@ configure its secret values directly on the server instead.
 - `POST /auth/login` - sign in
 - `GET /users/me` - get the signed-in user's profile
 - `PUT /users/me` - update the profile
-- `GET /users/arabic-course-progress` - get signed-in Arabic Basic progress
+- `GET /users/arabic-course-progress` - get signed-in Arabic course progress
 - `PUT /users/arabic-course-progress` - merge completed lessons and daily hearts
 - `POST /users/activity` - record activity and points
 - `GET /users/rank` - get the user's leaderboard rank

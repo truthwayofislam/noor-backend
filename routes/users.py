@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status, Depends
 from models.schemas import (
     ActivityLog,
+    ARABIC_COURSE_LESSON_IDS,
     ArabicCourseProgressSync,
     UserProfile,
     UserUpdate,
@@ -43,12 +44,6 @@ GAME_LEVEL_LIMITS = {
     "names_puzzle": 99,
     "wudu_steps": 12,
 }
-
-ARABIC_BASIC_LESSON_IDS = {
-    *(f"basic-alphabet-{index:02d}" for index in range(1, 6)),
-    *(f"basic-reading-{index:02d}" for index in range(1, 13)),
-}
-
 
 def _normalized_metadata_value(metadata: dict, key: str) -> str:
     value = metadata.get(key)
@@ -180,7 +175,7 @@ def _arabic_course_progress_response(result: dict) -> dict:
 async def get_arabic_course_progress(
     current_user: dict = Depends(get_current_user),
 ):
-    """Get the authenticated user's Arabic Basic progress."""
+    """Get the authenticated user's Arabic course progress."""
     try:
         result = await storage.get_arabic_course_progress(current_user["id"])
         return _arabic_course_progress_response(result)
@@ -200,7 +195,7 @@ async def sync_arabic_course_progress(
     lesson_ids = progress.completed_lesson_ids
     if (
         len(lesson_ids) != len(set(lesson_ids))
-        or any(lesson_id not in ARABIC_BASIC_LESSON_IDS for lesson_id in lesson_ids)
+        or any(lesson_id not in ARABIC_COURSE_LESSON_IDS for lesson_id in lesson_ids)
         or len(progress.heart_spend_ids) != len(set(progress.heart_spend_ids))
         or any(
             not spend_id or len(spend_id) > 80
