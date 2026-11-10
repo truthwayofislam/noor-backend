@@ -28,7 +28,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 The API is available at `http://localhost:8000`; OpenAPI docs are at
 `http://localhost:8000/docs`. At startup, the backend creates or migrates its
-`users` and `activities` tables.
+`users`, `activities`, and Arabic course progress tables.
 
 ## Deploy on a VPS with Docker
 
@@ -101,6 +101,8 @@ configure its secret values directly on the server instead.
 - `POST /auth/login` - sign in
 - `GET /users/me` - get the signed-in user's profile
 - `PUT /users/me` - update the profile
+- `GET /users/arabic-course-progress` - get signed-in Arabic Basic progress
+- `PUT /users/arabic-course-progress` - merge completed lessons and daily hearts
 - `POST /users/activity` - record activity and points
 - `GET /users/rank` - get the user's leaderboard rank
 - `GET /leaderboard/global` - global leaderboard
@@ -109,6 +111,10 @@ configure its secret values directly on the server instead.
 Passwords are hashed before they are stored. Rewards are assigned by the
 server, not by the points value sent by the app. Activity submissions are
 idempotent and update the user's streak and profile.
+
+Arabic progress is merged across devices. The server validates Basic lesson
+IDs, awards each lesson's points once, accepts idempotent heart-spend event IDs,
+and refills hearts by UTC day.
 
 ## Tests
 

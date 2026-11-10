@@ -82,6 +82,28 @@ class TursoStorage:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS arabic_course_progress (
+                    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                    completed_lesson_ids TEXT NOT NULL DEFAULT '[]',
+                    hearts INTEGER NOT NULL DEFAULT 5,
+                    heart_date TEXT NOT NULL,
+                    updated TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS arabic_course_heart_spends (
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    spend_id TEXT NOT NULL,
+                    heart_date TEXT NOT NULL,
+                    created TEXT NOT NULL,
+                    PRIMARY KEY (user_id, spend_id)
+                )
+                """
+            )
             user_columns = {
                 row[1]
                 for row in connection.execute("PRAGMA table_info(users)").fetchall()
@@ -400,6 +422,208 @@ class TursoStorage:
             event_key,
             activity_date,
         )
+
+    @staticmethod
+    def _ensure_arabic_course_progress(connection, user_id: str, today: date):
+        if TursoStorage._get_user(connection, user_id) is None:
+            raise ValueError("User not found.")
+
+        row = connection.execute(
+            "SELECT completed_lesson_ids, hearts, heart_date "
+            "FROM arabic_course_progress WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        now = datetime.now(timezone.utc).isoformat()
+        if row is None:
+            connection.execute(
+                """
+                INSERT INTO arabic_course_progress (
+                    user_id, completed_lesson_ids, hearts, heart_date, updated
+                ) VALUES (?, '[]', 5, ?, ?)
+                """,
+                (user_id, today.isoformat(), now),
+            )
+            return {"completed_lesson_ids": [], "hearts": 5,
+                    "heart_date": today.isoformat()}
+
+        try:
+            completed = json.loads(row[0])
+        except (TypeError, json.JSONDecodeError) as error:
+            raise ValueError("Saved Arabic course progress is invalid.") from error
+        if (
+            not isinstance(completed, list)
+            or any(not isinstance(lesson_id, str) for lesson_id in completed)
+            or not isinstance(row[1], int)
+            or not 0 <= row[1] <= 5
+        ):
+            raise ValueError("Saved Arabic course progress is invalid.")
+
+        heart_date = row[2]
+        hearts = row[1]
+        if heart_date != today.isoformat():
+            hearts = 5
+            heart_date = today.isoformat()
+            connection.execute(
+                """
+                UPDATE arabic_course_progress
+                SET hearts = 5, heart_date = ?, updated = ?
+                WHERE user_id = ?
+                """,
+                (heart_date, now, user_id),
+            )
+        return {
+            "completed_lesson_ids": completed,
+            "hearts": hearts,
+            "heart_date": heart_date,
+        }
+
+    async def get_arabic_course_progress(self, user_id: str) -> Dict[str, Any]:
+        return await self._run(self._get_arabic_course_progress, user_id)
+
+    def _get_arabic_course_progress(self, user_id: str) -> Dict[str, Any]:
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            progress = self._ensure_arabic_course_progress(
+                connection, user_id, datetime.now(timezone.utc).date()
+            )
+            progress["user"] = self._get_user(connection, user_id)
+            connection.commit()
+            return progress
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    async def sync_arabic_course_progress(
+        self,
+        user_id: str,
+        completed_lesson_ids: List[str],
+        hearts: int,
+        heart_date: Optional[date],
+        heart_spend_ids: List[str],
+    ) -> Dict[str, Any]:
+        return await self._run(
+            self._sync_arabic_course_progress,
+            user_id,
+            completed_lesson_ids,
+            hearts,
+            heart_date,
+            heart_spend_ids,
+        )
+
+    def _sync_arabic_course_progress(
+        self,
+        user_id: str,
+        completed_lesson_ids: List[str],
+        hearts: int,
+        heart_date: Optional[date],
+        heart_spend_ids: List[str],
+    ) -> Dict[str, Any]:
+        today = datetime.now(timezone.utc).date()
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            current = self._ensure_arabic_course_progress(
+                connection, user_id, today
+            )
+            now = datetime.now(timezone.utc).isoformat()
+            completed = set(current["completed_lesson_ids"])
+            completed.update(completed_lesson_ids)
+            current_hearts = current["hearts"]
+            if heart_date == today:
+                for spend_id in heart_spend_ids:
+                    cursor = connection.execute(
+                        """
+                        INSERT OR IGNORE INTO arabic_course_heart_spends (
+                            user_id, spend_id, heart_date, created
+                        ) VALUES (?, ?, ?, ?)
+                        """,
+                        (user_id, spend_id, today.isoformat(), now),
+                    )
+                    if cursor.rowcount:
+                        current_hearts = max(0, current_hearts - 1)
+                current_hearts = min(current_hearts, hearts)
+            connection.execute(
+                """
+                UPDATE arabic_course_progress
+                SET completed_lesson_ids = ?, hearts = ?, heart_date = ?, updated = ?
+                WHERE user_id = ?
+                """,
+                (
+                    json.dumps(sorted(completed)),
+                    current_hearts,
+                    today.isoformat(),
+                    now,
+                    user_id,
+                ),
+            )
+            newly_recorded = 0
+            for lesson_id in sorted(completed):
+                lesson_metadata = {"lesson": f"arabic-basic-{lesson_id}"}
+                try:
+                    connection.execute(
+                        """
+                        INSERT INTO activities (
+                            id, user_id, activity_type, points, metadata, event_key, created
+                        ) VALUES (?, ?, 'lesson_completed', 20, ?, ?, ?)
+                        """,
+                        (
+                            str(uuid.uuid4()),
+                            user_id,
+                            json.dumps(lesson_metadata),
+                            f"lesson:arabic-basic-{lesson_id}",
+                            now,
+                        ),
+                    )
+                    newly_recorded += 1
+                except Exception as error:
+                    if (
+                        "UNIQUE constraint failed: "
+                        "activities.user_id, activities.event_key"
+                    ) not in str(error):
+                        raise
+
+            if newly_recorded:
+                yesterday = today - timedelta(days=1)
+                connection.execute(
+                    """
+                    UPDATE users
+                    SET points = points + ?,
+                        streak_days = CASE
+                            WHEN last_activity_date = ? THEN streak_days
+                            WHEN last_activity_date = ? THEN streak_days + 1
+                            ELSE 1
+                        END,
+                        last_activity_date = ?,
+                        lessons_completed = lessons_completed + ?,
+                        updated = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        newly_recorded * 20,
+                        today.isoformat(),
+                        yesterday.isoformat(),
+                        today.isoformat(),
+                        newly_recorded,
+                        now,
+                        user_id,
+                    ),
+                )
+            connection.commit()
+            result = {
+                "completed_lesson_ids": sorted(completed),
+                "hearts": current_hearts,
+                "heart_date": today.isoformat(),
+            }
+            result["user"] = self._get_user(connection, user_id)
+            return result
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def _log_activity(
         self,

@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import libsql
@@ -62,6 +62,72 @@ class TursoStorageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(activity_result["points_earned"], 5)
         self.assertEqual(leaderboard[0]["user_id"], user["id"])
         self.assertEqual(rank["rank"], 1)
+
+    async def test_arabic_course_progress_merges_and_rewards_lessons_once(self):
+        user = await self._create_user()
+        today = datetime.now(timezone.utc).date()
+
+        initial = await self.storage.get_arabic_course_progress(user["id"])
+        self.assertEqual(initial["completed_lesson_ids"], [])
+        self.assertEqual(initial["hearts"], 5)
+
+        first_sync = await self.storage.sync_arabic_course_progress(
+            user["id"],
+            ["basic-alphabet-01"],
+            4,
+            today,
+            ["device-a-spend-1"],
+        )
+        repeated_sync = await self.storage.sync_arabic_course_progress(
+            user["id"],
+            ["basic-alphabet-01"],
+            5,
+            today,
+            ["device-a-spend-1"],
+        )
+        second_device_sync = await self.storage.sync_arabic_course_progress(
+            user["id"],
+            ["basic-alphabet-02"],
+            4,
+            today,
+            ["device-b-spend-1"],
+        )
+
+        self.assertEqual(first_sync["completed_lesson_ids"], ["basic-alphabet-01"])
+        self.assertEqual(first_sync["hearts"], 4)
+        self.assertEqual(repeated_sync["hearts"], 4)
+        self.assertEqual(second_device_sync["hearts"], 3)
+        self.assertEqual(
+            second_device_sync["completed_lesson_ids"],
+            ["basic-alphabet-01", "basic-alphabet-02"],
+        )
+        self.assertEqual(second_device_sync["user"]["points"], 40)
+        self.assertEqual(second_device_sync["user"]["lessons_completed"], 2)
+
+    async def test_arabic_course_progress_resets_hearts_after_utc_day(self):
+        user = await self._create_user()
+        today = datetime.now(timezone.utc).date()
+        await self.storage.sync_arabic_course_progress(
+            user["id"],
+            ["basic-reading-01"],
+            1,
+            today,
+            [],
+        )
+        connection = self.storage._connect()
+        try:
+            connection.execute(
+                "UPDATE arabic_course_progress SET heart_date = ? WHERE user_id = ?",
+                ((today - timedelta(days=1)).isoformat(), user["id"]),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        progress = await self.storage.get_arabic_course_progress(user["id"])
+
+        self.assertEqual(progress["hearts"], 5)
+        self.assertEqual(progress["completed_lesson_ids"], ["basic-reading-01"])
 
     async def test_activity_retries_are_idempotent_and_streaks_follow_days(self):
         user = await self._create_user()

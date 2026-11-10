@@ -1,10 +1,10 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 
-from models.schemas import ActivityLog
+from models.schemas import ActivityLog, ArabicCourseProgressSync
 from routes import users
 
 
@@ -85,6 +85,90 @@ class ActivityRewardTests(unittest.IsolatedAsyncioTestCase):
             log_activity.await_args.kwargs["event_key"],
             f"prayer:{today.isoformat()}:fajr",
         )
+
+    async def test_client_activity_date_cannot_create_another_daily_reward(self):
+        today = datetime.now(timezone.utc).date()
+        event_keys = []
+
+        async def record_activity(**kwargs):
+            event_keys.append(kwargs["event_key"])
+            return {"user": self.user, "points_earned": 0}
+
+        with patch.object(
+            users.storage,
+            "log_activity",
+            new_callable=AsyncMock,
+            side_effect=record_activity,
+        ):
+            for requested_date in (
+                today - timedelta(days=1),
+                today,
+                today + timedelta(days=1),
+            ):
+                activity = ActivityLog(
+                    user_id="user-1",
+                    activity_type="prayer_logged",
+                    metadata={"prayer": "Fajr"},
+                    activity_date=requested_date,
+                )
+                await users.log_activity(activity, self.user)
+
+        self.assertEqual(
+            event_keys,
+            [f"prayer:{today.isoformat()}:fajr"] * 3,
+        )
+
+    async def test_arabic_progress_rejects_unknown_lessons(self):
+        progress = ArabicCourseProgressSync(
+            completed_lesson_ids=["not-a-course-lesson"],
+            hearts=5,
+            heart_date=datetime.now(timezone.utc).date(),
+        )
+
+        with self.assertRaises(HTTPException) as error:
+            await users.sync_arabic_course_progress(progress, self.user)
+
+        self.assertEqual(error.exception.status_code, 422)
+
+    async def test_arabic_progress_sync_returns_server_merged_state(self):
+        today = datetime.now(timezone.utc).date()
+        progress = ArabicCourseProgressSync(
+            completed_lesson_ids=["basic-alphabet-01"],
+            hearts=4,
+            heart_date=today,
+            heart_spend_ids=["device-a-spend-1"],
+        )
+        storage_result = {
+            "completed_lesson_ids": ["basic-alphabet-01", "basic-alphabet-02"],
+            "hearts": 3,
+            "heart_date": today.isoformat(),
+            "user": self.user,
+        }
+
+        with patch.object(
+            users.storage,
+            "sync_arabic_course_progress",
+            new_callable=AsyncMock,
+            return_value=storage_result,
+        ) as sync_progress:
+            response = await users.sync_arabic_course_progress(progress, self.user)
+
+        self.assertEqual(
+            sync_progress.await_args.kwargs,
+            {
+                "user_id": "user-1",
+                "completed_lesson_ids": ["basic-alphabet-01"],
+                "hearts": 4,
+                "heart_date": today,
+                "heart_spend_ids": ["device-a-spend-1"],
+            },
+        )
+        self.assertEqual(
+            response["progress"]["completed_lesson_ids"],
+            ["basic-alphabet-01", "basic-alphabet-02"],
+        )
+        self.assertEqual(response["progress"]["hearts"], 3)
+        self.assertEqual(response["user"]["id"], "user-1")
 
 
 if __name__ == "__main__":

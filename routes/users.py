@@ -1,7 +1,12 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from models.schemas import UserProfile, UserUpdate, ActivityLog
+from models.schemas import (
+    ActivityLog,
+    ArabicCourseProgressSync,
+    UserProfile,
+    UserUpdate,
+)
 from routes.auth import get_current_user
 from utils.turso_storage import turso_storage as storage
 
@@ -37,6 +42,11 @@ GAME_LEVEL_LIMITS = {
     "prayer_quiz": 50,
     "names_puzzle": 99,
     "wudu_steps": 12,
+}
+
+ARABIC_BASIC_LESSON_IDS = {
+    *(f"basic-alphabet-{index:02d}" for index in range(1, 6)),
+    *(f"basic-reading-{index:02d}" for index in range(1, 13)),
 }
 
 
@@ -115,6 +125,7 @@ def _user_profile(user: dict) -> UserProfile:
         level=user["level"],
         points=user.get("points", 0),
         streak_days=user.get("streak_days", 0),
+        last_activity_date=user.get("last_activity_date"),
         quran_progress=user.get("quran_progress", 0.0),
         prayers_logged=user.get("prayers_logged", 0),
         lessons_completed=user.get("lessons_completed", 0),
@@ -154,6 +165,69 @@ async def update_my_profile(
             detail=str(e)
         )
 
+def _arabic_course_progress_response(result: dict) -> dict:
+    return {
+        "progress": {
+            "completed_lesson_ids": result["completed_lesson_ids"],
+            "hearts": result["hearts"],
+            "heart_date": result["heart_date"],
+        },
+        "user": _user_profile(result["user"]).model_dump(),
+    }
+
+
+@router.get("/arabic-course-progress")
+async def get_arabic_course_progress(
+    current_user: dict = Depends(get_current_user),
+):
+    """Get the authenticated user's Arabic Basic progress."""
+    try:
+        result = await storage.get_arabic_course_progress(current_user["id"])
+        return _arabic_course_progress_response(result)
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to load Arabic course progress.",
+        ) from error
+
+
+@router.put("/arabic-course-progress")
+async def sync_arabic_course_progress(
+    progress: ArabicCourseProgressSync,
+    current_user: dict = Depends(get_current_user),
+):
+    """Merge Arabic course completion and daily hearts across the user's devices."""
+    lesson_ids = progress.completed_lesson_ids
+    if (
+        len(lesson_ids) != len(set(lesson_ids))
+        or any(lesson_id not in ARABIC_BASIC_LESSON_IDS for lesson_id in lesson_ids)
+        or len(progress.heart_spend_ids) != len(set(progress.heart_spend_ids))
+        or any(
+            not spend_id or len(spend_id) > 80
+            for spend_id in progress.heart_spend_ids
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Arabic progress contains invalid or duplicate entries.",
+        )
+
+    try:
+        result = await storage.sync_arabic_course_progress(
+            user_id=current_user["id"],
+            completed_lesson_ids=lesson_ids,
+            hearts=progress.hearts,
+            heart_date=progress.heart_date,
+            heart_spend_ids=progress.heart_spend_ids,
+        )
+        return _arabic_course_progress_response(result)
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to sync Arabic course progress.",
+        ) from error
+
+
 @router.post("/activity", status_code=status.HTTP_201_CREATED)
 async def log_activity(
     activity: ActivityLog,
@@ -173,12 +247,8 @@ async def log_activity(
             )
 
         today = datetime.now(timezone.utc).date()
-        event_date = activity.activity_date or today
-        if abs((event_date - today).days) > 1:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Activity date must be within one day of the current UTC date.",
-            )
+        # Never let a client-supplied date create another daily reward key.
+        event_date = today
         if activity.activity_type == "daily_task_completed":
             task_id = (activity.metadata or {}).get("task_id")
             points = (

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import List, Optional
 from datetime import date, datetime
 
 class UserRegister(BaseModel):
@@ -21,6 +21,7 @@ class UserProfile(BaseModel):
     level: str
     points: int = 0
     streak_days: int = 0
+    last_activity_date: Optional[date] = None
     quran_progress: float = 0.0
     prayers_logged: int = 0
     lessons_completed: int = 0
@@ -40,6 +41,12 @@ class ActivityLog(BaseModel):
     points: int = Field(default=0, ge=0)
     metadata: Optional[dict] = None
     activity_date: Optional[date] = None
+
+class ArabicCourseProgressSync(BaseModel):
+    completed_lesson_ids: List[str] = Field(default_factory=list, max_length=17)
+    hearts: int = Field(ge=0, le=5)
+    heart_date: Optional[date] = None
+    heart_spend_ids: List[str] = Field(default_factory=list, max_length=5)
 
 class LeaderboardEntry(BaseModel):
     rank: int
